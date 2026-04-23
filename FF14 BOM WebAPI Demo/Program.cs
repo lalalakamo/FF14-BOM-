@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using NetCoreStudy3_DTO.Models;
+using FF14BOM.Models;
 using WebAPI.Models;
 
 var builder = WebApplication.CreateBuilder(args);

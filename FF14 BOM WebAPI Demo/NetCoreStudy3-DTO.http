@@ -1,0 +1,6 @@
+@FF14BOM_HostAddress = http://localhost:5156
+
+GET {{FF14BOM_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

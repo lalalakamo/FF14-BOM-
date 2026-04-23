@@ -1,4 +1,4 @@
-﻿namespace NetCoreStudy3_DTO.Models
+﻿namespace FF14BOM.Models
 {
     public class Item
     {
@@ -7,6 +7,8 @@
         public string Mtr_type { get; set; }    //材料類別
 
         public string Mtr_Name { get; set; }    //材料名稱
+
+        public bool NPC_Sell { get; set; }    //NPC販售
 
     }
 }
