@@ -1,4 +1,4 @@
-﻿namespace NetCoreStudy3_DTO.Models
+﻿namespace FF14BOM.Models
 {
     public class Product
     {

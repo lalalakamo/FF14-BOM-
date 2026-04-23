@@ -1,6 +1,6 @@
-﻿namespace NetCoreStudy3_DTO.Models
+﻿namespace FF14BOM.Dtos
 {
-    public class BOM
+    public class BOMDto
     {
         public string Pro_Id { get; set; }  //產品編號
 
