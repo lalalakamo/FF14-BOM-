@@ -39,7 +39,15 @@ namespace FF14BOM.Models
             modelBuilder.Entity<BOM>(entity =>
             {
                 //設定Pro_Id、Mtr_Id為複合主鍵
-                entity.HasKey(e => new { e.Pro_Id,e.Mtr_id});  
+                entity.HasKey(e => new { e.Pro_Id,e.Mtr_id});
+                //設定item關聯mtr_id為外鍵
+                entity.HasOne(b => b.Item)
+                    .WithMany()
+                    .HasForeignKey(b => b.Mtr_id);
+                //設定product關聯pro_id為外鍵
+                entity.HasOne(b => b.Product)
+                    .WithMany(p => p.BOMs)
+                    .HasForeignKey(b => b.Pro_Id);
 
                 entity.Property(e => e.Pro_Id).HasMaxLength(4);
                 entity.Property(e => e.Mtr_id).HasMaxLength(5);

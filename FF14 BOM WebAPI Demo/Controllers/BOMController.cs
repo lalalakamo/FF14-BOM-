@@ -19,82 +19,48 @@ namespace FF14BOM.Controllers
             _webContext = webContext;
         }
 
-        // GET: api/<ValuesController>
+        //案條件搜尋
         [HttpGet]
-        public IEnumerable<BOMGetDto> Get()
+        public IActionResult Get(string? L ,string? P)
         {
-            var results = _webContext.Product
-                .Select(p => new BOMGetDto
-                {
-                    Pro_Name = p.Pro_Name,
-                    Pro_Id = p.Pro_Id,
-                    Materials = _webContext.BOM
-                   .Where(b => b.Pro_Id == p.Pro_Id)
-                   .Select(b => new MtrDetailDto
-                   {
-                       Use_QTY = b.Use_QTY,
-                       Mtr_Name = _webContext.Item
-                       .Where(i => i.Mtr_id == b.Mtr_id)
-                       .Select(i => i.Mtr_Name)
-                       .FirstOrDefault()
-                   })
-                   .ToList()
+            var query = GetBOMQuery();
 
-                });
-                //.ToList();
-            return results;
+            if (!string.IsNullOrEmpty(L)) query = query.Where(q => q.Pro_Level == L);
+            if (!string.IsNullOrEmpty(P)) query = query.Where(q => q.Pro_part == P);
+
+            return Ok(query.ToList());
         }
 
-        // GET api/<ValuesController>/5
+        //案編號搜尋
         [HttpGet("{id}")]
-        public IEnumerable<BOMGetDto> GetById(string id)
+        public IActionResult GetById(string id)
         {
-            var result = _webContext.Product
-                .Where(p => p.Pro_Id == id)
+            var result = GetBOMQuery().FirstOrDefault(p => p.Pro_Id == id);
+            if (result == null)
+                return NotFound();
+            return Ok(result);
+        }
+
+        private IQueryable<BOMGetDto> GetBOMQuery()
+        { 
+            return _webContext.Product
                 .Select(p => new BOMGetDto
                 {
                     Pro_Name = p.Pro_Name,
                     Pro_Id = p.Pro_Id,
-                    Materials = _webContext.BOM
-                    .Where(b => b.Pro_Id == p.Pro_Id && b.Pro_Id == id)
+                    Pro_Level = p.Pro_Level,
+                    Pro_part = p.Pro_part,
+                    Materials = p.BOMs
                     .Select(b => new MtrDetailDto
                     {
                         Use_QTY = b.Use_QTY,
-                        Mtr_Name = _webContext.Item
-                        .Where(i => i.Mtr_id == b.Mtr_id)
-                        .Select(i => i.Mtr_Name)
-                        .FirstOrDefault()
+                        Mtr_Name = b.Item.Mtr_Name ?? "未知材料"
                     }).ToList()
                 });
-            return result;
         }
 
         //案條件搜尋
-        [HttpGet("C")]
-        public IEnumerable<BOMGetDto> GetByCondition(string? L ,string? P)
-        { 
-            var result = _webContext.Product
-                .Where(p => (L == null || p.Pro_Level == L) && (P == null || p.Pro_part == P))
-                .Select(p => new BOMGetDto
-                {
-                    Pro_Name = p.Pro_Name,
-                    Pro_Id = p.Pro_Id,
-                    Materials = _webContext.BOM
-                    .Where(b => b.Pro_Id == p.Pro_Id)
-                    .Select(b => new MtrDetailDto
-                    {
-                        Use_QTY = b.Use_QTY,
-                        Mtr_Name = _webContext.Item
-                        .Where(i => i.Mtr_id == b.Mtr_id)
-                        .Select(i => i.Mtr_Name)
-                        .FirstOrDefault()
-                    }).ToList()
-                }).ToList();
-            return result;
-        }
-
-        //案條件搜尋
-        [HttpGet("LIST/{id}")]
+        [HttpGet("{id}/bom")]
         public IEnumerable<BOMAddDto> GetByList(string id)
         {
             var result = _webContext.Product
@@ -120,64 +86,97 @@ namespace FF14BOM.Controllers
         [HttpPost]
         public IActionResult Post([FromBody] List<BOMAddDto> BOMDtoList)
         {
-            string okmsg="",badmsg="";
-            var itemstoadd = new List<BOM>();
+            if (BOMDtoList == null) return BadRequest();
+            string logMsg = "";
 
-            string Pro_Id = BOMDtoList[0].Pro_Id;
-            foreach (var mtr in BOMDtoList[0].MtrDetailId)
+            foreach (var dto in BOMDtoList)
             {
-                string Mtr_Id = mtr.Mtr_Id;
-                int Use_QTY = mtr.Use_QTY;
-
-                //檢查是否有重複主鍵
-                bool exist = _webContext.BOM.Any(b => b.Pro_Id == Pro_Id && b.Mtr_id == Mtr_Id);
-                if (exist)  //有重複，跳過該筆資料並記錄錯誤訊息
-                { 
-                    badmsg += $"產品編號{Pro_Id}+材料編號{Mtr_Id}\n";
-                    continue;
-                }
-
-                //無重複，新增BOM物件到清單
-                itemstoadd.Add(new BOM
+                foreach (var mtr in dto.MtrDetailId)
                 {
-                    Pro_Id = Pro_Id,
-                    Mtr_id = Mtr_Id,
-                    Use_QTY = Use_QTY
-                });
-                okmsg += $"產品編號{Pro_Id}+材料編號{Mtr_Id}\n";
+                    //檢查是否有重複主鍵
+                    var exist = _webContext.BOM.FirstOrDefault(b => b.Pro_Id == dto.Pro_Id && b.Mtr_id == mtr.Mtr_Id);
+                    if (exist != null)  //有重複，跳過該筆資料並記錄錯誤訊息
+                    {
+                        if (exist.Use_QTY != mtr.Use_QTY)
+                        {
+                            exist.Use_QTY = mtr.Use_QTY; //更新數量
+                            logMsg += $"[更新]{dto.Pro_Id}材料{mtr.Mtr_Id}->數量" + mtr.Use_QTY + "\n";
+                        }
+                    }
+                    else
+                    {
+                        //無重複，新增BOM物件到清單
+                        _webContext.BOM.Add(new BOM { Pro_Id = dto.Pro_Id, Mtr_id = mtr.Mtr_Id, Use_QTY = mtr.Use_QTY });
+                        logMsg += $"[新增]{dto.Pro_Id}材料{mtr.Mtr_Id}\n";
+                    }
+                }
             }
-            if (itemstoadd.Any())
-            {
-                _webContext.BOM.AddRange(itemstoadd);
-                _webContext.SaveChanges();
-            }
-            return Ok("成功寫入" + okmsg + "\n" + "已存在未寫入:" + badmsg);
+
+            _webContext.SaveChanges();
+            return Ok("處理完成\n" + logMsg);
         }
 
         //先執行GET/LIST後，直接修改BOM LIST後，再執行PUT，會直接覆蓋原有BOM資料，請注意！
         // PUT api/<ValuesController>/5
         //[HttpPut("PUT")]
-        //public IActionResult Put([FromBody] List<BOMDto> BOMDtoList)
+        //public IActionResult Put([FromBody] List<BOMAddDto> BOMDtoList)
         //{
+        //    string okmsg = "", badmsg = "";
         //    var itemstoadd = new List<BOM>();
 
-        //    foreach(var dto in BOMDtoList)
+        //    string Pro_Id = BOMDtoList[0].Pro_Id;
+
+        //    foreach (var mtr in BOMDtoList[0].MtrDetailId)
         //    {
-        //        bool exist = _webContext.BOM.Any(b => b.Pro_Id == dto.Pro_Id && b.Mtr_id == dto.Mtr_id);
-        //        if (exist)
-        //            return BadRequest($"產品編號{dto.Pro_Id}+材料編號{dto.Mtr_id}已存在，請確認後再試一次！");
+        //        string Mtr_Id = mtr.Mtr_Id;
+        //        int Use_QTY = mtr.Use_QTY;
 
+        //        //檢查是否有重複主鍵
+        //        bool exist = _webContext.BOM.Any(b => b.Pro_Id == Pro_Id && b.Mtr_id == Mtr_Id);
+        //        if (exist)  //有重複，跳過該筆資料並記錄錯誤訊息
+        //        {
+        //            badmsg += $"產品編號{Pro_Id}+材料編號{Mtr_Id}\n";
+        //            continue;
+        //        }
+        //        itemstoadd.Add(new BOM
+        //        {
+        //            Pro_Id = Pro_Id,
+        //            Mtr_id = Mtr_Id,
+        //            Use_QTY = Use_QTY
+        //        });
+        //        okmsg += $"產品編號{Pro_Id}+材料編號{Mtr_Id}\n";
 
-
+        //        if (itemstoadd.Any())
+        //        { 
+        //            _webContext.BOM.AddRange(itemstoadd);
+        //            _webContext.SaveChanges();
+        //        }
         //    }
-
-
+        //    return Ok("成功寫入" + okmsg + "\n" + "已存在未寫入:" + badmsg);
         //}
 
         // DELETE api/<ValuesController>/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
+        [HttpDelete("{proId}")]
+        public IActionResult Delete(string proId, string? mtr_Id)
         {
+            var query = _webContext.BOM.Where(b => b.Pro_Id == proId);
+
+            if (!string.IsNullOrEmpty(mtr_Id))
+                query = query.Where(b => b.Mtr_id == mtr_Id);
+            
+            var deletelist = query.ToList();
+
+            if (!deletelist.Any())
+                return NotFound("找不到對應的 BOM 資料，請檢查編號是否有誤。");
+
+            _webContext.BOM.RemoveRange(deletelist);
+            _webContext.SaveChanges();
+
+            string msg = string.IsNullOrEmpty(mtr_Id)
+                ? $"已清空產品 {proId} 的所有 BOM 資料"
+                : $"已刪除產品 {proId} 中材料 {mtr_Id} 的紀錄";
+
+            return Ok(msg);
 
         }
 

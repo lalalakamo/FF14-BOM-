@@ -6,6 +6,8 @@ namespace FF14BOM.Dtos
     {
         public string Pro_Name { get; set; }
         public string Pro_Id { get; set; }
+        public string Pro_Level { get; set; }
+        public string Pro_part { get; set; }
         public List<MtrDetailDto> Materials { get; set; }
 
     }

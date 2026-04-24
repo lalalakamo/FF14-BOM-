@@ -12,6 +12,8 @@
 
         public string Pro_Id { get; set; }     //產品編號 用來找BOM用
 
+        public virtual ICollection<BOM> BOMs { get; set; }
+
         //依裝備等級+裝備部位搜尋 
         //ex 白麻巧匠包頭巾→711 斯劍虎革巧匠手套→714
 
