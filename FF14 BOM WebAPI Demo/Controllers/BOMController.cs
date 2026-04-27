@@ -23,64 +23,95 @@ namespace FF14BOM.Controllers
         [HttpGet]
         public IActionResult Get(string? L ,string? P)
         {
-            var query = GetBOMQuery();
+            var query = _webContext.Product.AsQueryable();
 
             if (!string.IsNullOrEmpty(L)) query = query.Where(q => q.Pro_Level == L);
             if (!string.IsNullOrEmpty(P)) query = query.Where(q => q.Pro_part == P);
 
-            return Ok(query.ToList());
+            var result = query.Select(p => new BOMGetDto
+            { 
+                Pro_Id = p.Pro_Id,
+                Pro_Name = p.Pro_Name,
+                Materials = p.BOMs.Select(b => new MtrDetailDto
+                {
+                    Mtr_id = b.Mtr_id,
+                    Mtr_Name = b.Item.Mtr_Name,
+                    Use_QTY = b.Use_QTY
+                }).ToList()
+            }).ToList();
+
+            return Ok(result);
         }
 
         //案編號搜尋
         [HttpGet("{id}")]
         public IActionResult GetById(string id)
         {
-            var result = GetBOMQuery().FirstOrDefault(p => p.Pro_Id == id);
+            var query = _webContext.Product.Where(p => p.Pro_Id == id).AsQueryable();
+
+            var result = query.Select(p => new BOMGetDto 
+            {
+                Pro_Id = p.Pro_Id,
+                Pro_Name = p.Pro_Name,
+                Materials = p.BOMs.Select(b => new MtrDetailDto 
+                {
+                    Mtr_id = b.Mtr_id,
+                    Mtr_Name = b.Item.Mtr_Name,
+                    Use_QTY = b.Use_QTY
+                }).ToList()
+            }).FirstOrDefault();
+
             if (result == null)
                 return NotFound();
+
             return Ok(result);
         }
 
-        private IQueryable<BOMGetDto> GetBOMQuery()
-        { 
-            return _webContext.Product
-                .Select(p => new BOMGetDto
-                {
-                    Pro_Name = p.Pro_Name,
-                    Pro_Id = p.Pro_Id,
-                    Pro_Level = p.Pro_Level,
-                    Pro_part = p.Pro_part,
-                    Materials = p.BOMs
-                    .Select(b => new MtrDetailDto
-                    {
-                        Use_QTY = b.Use_QTY,
-                        Mtr_Name = b.Item.Mtr_Name ?? "未知材料"
-                    }).ToList()
-                });
-        }
-
-        //案條件搜尋
-        [HttpGet("{id}/bom")]
-        public IEnumerable<BOMAddDto> GetByList(string id)
+        //案條件搜尋(BOM初始資料型態)
+        [HttpGet("BOM")]
+        public IActionResult GetBOM(string? L, string? P)
         {
-            var result = _webContext.Product
-                .Where(p => p.Pro_Id == id)
-                .Select(p => new BOMAddDto
-                {
-                    Pro_Name = p.Pro_Name,
-                    Pro_Id = p.Pro_Id,
-                    MtrDetailId = _webContext.BOM
-                        .Where(b => b.Pro_Id == p.Pro_Id)
-                        .Select(b => new MtrDetailIdDto
-                        {
-                            Mtr_Id = b.Mtr_id,
-                            Use_QTY = b.Use_QTY
-                        }).ToList(),
-                }).ToList();
+            var query = _webContext.Product.AsQueryable();
 
-            return result;
+            if (!string.IsNullOrEmpty(L)) query = query.Where(q => q.Pro_Level == L);
+            if (!string.IsNullOrEmpty(P)) query = query.Where(q => q.Pro_part == P);
+
+            var result = query.Select(p => new BOMAddDto
+            {
+                Pro_Id = p.Pro_Id,
+                Pro_Name = p.Pro_Name,
+                MtrDetailId = p.BOMs.Select(b => new MtrDetailIdDto
+                {
+                    Mtr_Id = b.Mtr_id,
+                    Use_QTY = b.Use_QTY
+                }).ToList()
+            }).ToList();
+
+            return Ok(result);
         }
 
+        //案編號搜尋(BOM初始資料型態)
+        [HttpGet("{id}/BOM")]
+        public IActionResult GetByIdBOM(string id)
+        {
+            var query = _webContext.Product.Where(p => p.Pro_Id == id).AsQueryable();
+
+            var result = query.Select(p => new BOMAddDto
+            {
+                Pro_Id = p.Pro_Id,
+                Pro_Name = p.Pro_Name,
+                MtrDetailId = p.BOMs.Select(b => new MtrDetailIdDto
+                {
+                    Mtr_Id = b.Mtr_id,
+                    Use_QTY = b.Use_QTY
+                }).ToList()
+            }).FirstOrDefault();
+
+            if (result == null)
+                return NotFound();
+
+            return Ok(result);
+        }
 
         // POST api/<ValuesController>
         [HttpPost]
@@ -115,46 +146,6 @@ namespace FF14BOM.Controllers
             _webContext.SaveChanges();
             return Ok("處理完成\n" + logMsg);
         }
-
-        //先執行GET/LIST後，直接修改BOM LIST後，再執行PUT，會直接覆蓋原有BOM資料，請注意！
-        // PUT api/<ValuesController>/5
-        //[HttpPut("PUT")]
-        //public IActionResult Put([FromBody] List<BOMAddDto> BOMDtoList)
-        //{
-        //    string okmsg = "", badmsg = "";
-        //    var itemstoadd = new List<BOM>();
-
-        //    string Pro_Id = BOMDtoList[0].Pro_Id;
-
-        //    foreach (var mtr in BOMDtoList[0].MtrDetailId)
-        //    {
-        //        string Mtr_Id = mtr.Mtr_Id;
-        //        int Use_QTY = mtr.Use_QTY;
-
-        //        //檢查是否有重複主鍵
-        //        bool exist = _webContext.BOM.Any(b => b.Pro_Id == Pro_Id && b.Mtr_id == Mtr_Id);
-        //        if (exist)  //有重複，跳過該筆資料並記錄錯誤訊息
-        //        {
-        //            badmsg += $"產品編號{Pro_Id}+材料編號{Mtr_Id}\n";
-        //            continue;
-        //        }
-        //        itemstoadd.Add(new BOM
-        //        {
-        //            Pro_Id = Pro_Id,
-        //            Mtr_id = Mtr_Id,
-        //            Use_QTY = Use_QTY
-        //        });
-        //        okmsg += $"產品編號{Pro_Id}+材料編號{Mtr_Id}\n";
-
-        //        if (itemstoadd.Any())
-        //        { 
-        //            _webContext.BOM.AddRange(itemstoadd);
-        //            _webContext.SaveChanges();
-        //        }
-        //    }
-        //    return Ok("成功寫入" + okmsg + "\n" + "已存在未寫入:" + badmsg);
-        //}
-
         // DELETE api/<ValuesController>/5
         [HttpDelete("{proId}")]
         public IActionResult Delete(string proId, string? mtr_Id)
