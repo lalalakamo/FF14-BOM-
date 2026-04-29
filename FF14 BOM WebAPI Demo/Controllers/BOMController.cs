@@ -115,33 +115,56 @@ namespace FF14BOM.Controllers
 
         // POST api/<ValuesController>
         [HttpPost]
-        public IActionResult Post([FromBody] List<BOMAddDto> BOMDtoList)
+        public IActionResult Post([FromBody] List<BOMGetDto> BOMDtoList)
         {
             if (BOMDtoList == null) return BadRequest();
             string logMsg = "";
 
             foreach (var dto in BOMDtoList)
             {
-                foreach (var mtr in dto.MtrDetailId)
+                foreach (var mtr in dto.Materials)
                 {
                     //檢查是否有重複主鍵
-                    var exist = _webContext.BOM.FirstOrDefault(b => b.Pro_Id == dto.Pro_Id && b.Mtr_id == mtr.Mtr_Id);
+                    var exist = _webContext.BOM.FirstOrDefault(b => b.Pro_Id == dto.Pro_Id && b.Mtr_id == mtr.Mtr_id);
                     if (exist != null)  //有重複，跳過該筆資料並記錄錯誤訊息
                     {
                         if (exist.Use_QTY != mtr.Use_QTY)
                         {
                             exist.Use_QTY = mtr.Use_QTY; //更新數量
-                            logMsg += $"[更新]{dto.Pro_Id}材料{mtr.Mtr_Id}->數量" + mtr.Use_QTY + "\n";
+                            logMsg += $"[更新]{dto.Pro_Id}材料{mtr.Mtr_id}->數量" + mtr.Use_QTY + "\n";
                         }
                     }
                     else
                     {
                         //無重複，新增BOM物件到清單
-                        _webContext.BOM.Add(new BOM { Pro_Id = dto.Pro_Id, Mtr_id = mtr.Mtr_Id, Use_QTY = mtr.Use_QTY });
-                        logMsg += $"[新增]{dto.Pro_Id}材料{mtr.Mtr_Id}\n";
+                        _webContext.BOM.Add(new BOM { Pro_Id = dto.Pro_Id, Mtr_id = mtr.Mtr_id, Use_QTY = mtr.Use_QTY });
+                        logMsg += $"[新增]{dto.Pro_Id}材料{mtr.Mtr_id}\n";
                     }
                 }
             }
+
+            //foreach (var dto in BOMDtoList)
+            //{
+            //    foreach (var mtr in dto.MtrDetailId)
+            //    {
+            //        //檢查是否有重複主鍵
+            //        var exist = _webContext.BOM.FirstOrDefault(b => b.Pro_Id == dto.Pro_Id && b.Mtr_id == mtr.Mtr_Id);
+            //        if (exist != null)  //有重複，跳過該筆資料並記錄錯誤訊息
+            //        {
+            //            if (exist.Use_QTY != mtr.Use_QTY)
+            //            {
+            //                exist.Use_QTY = mtr.Use_QTY; //更新數量
+            //                logMsg += $"[更新]{dto.Pro_Id}材料{mtr.Mtr_Id}->數量" + mtr.Use_QTY + "\n";
+            //            }
+            //        }
+            //        else
+            //        {
+            //            //無重複，新增BOM物件到清單
+            //            _webContext.BOM.Add(new BOM { Pro_Id = dto.Pro_Id, Mtr_id = mtr.Mtr_Id, Use_QTY = mtr.Use_QTY });
+            //            logMsg += $"[新增]{dto.Pro_Id}材料{mtr.Mtr_Id}\n";
+            //        }
+            //    }
+            //}
 
             _webContext.SaveChanges();
             return Ok("處理完成\n" + logMsg);
