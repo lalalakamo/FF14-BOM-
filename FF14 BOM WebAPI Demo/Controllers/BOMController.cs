@@ -194,6 +194,24 @@ namespace FF14BOM.Controllers
 
         }
 
-        
+        [HttpPut("{proIdfrom}/{proIdto}")]
+        public IActionResult Copy(string proIdfrom,string proIdto)
+        {
+            var search = _webContext.BOM.Where(b => b.Pro_Id == proIdfrom).ToList();
+            if (!search.Any())
+                return NotFound($"未找到{proIdfrom}的BOM資料");
+
+            var delete = _webContext.BOM.Where(b => b.Pro_Id == proIdto).ToList();
+            _webContext.BOM.RemoveRange(delete);
+
+            foreach (var bom in search)
+            {
+                _webContext.BOM.Add(new BOM { Pro_Id = proIdto, Mtr_id = bom.Mtr_id, Use_QTY = bom.Use_QTY });
+            }
+            _webContext.SaveChanges();
+            return Ok($"已複製{proIdfrom}的資料至{proIdto}");
+        }
+
+
     }
 }
