@@ -47,7 +47,8 @@ namespace FF14BOM.Controllers
                 Mtr_id = i.Mtr_id,
                 Mtr_type = i.Mtr_type,
                 Mtr_Name = i.Mtr_Name,
-                NPC_Sell = i.NPC_Sell
+                NPC_Sell = i.NPC_Sell,
+                mtr_Level = i.Mtr_Level
             })
             .Where(i => i.Mtr_id == id).FirstOrDefault();
             if (result == null) return NotFound($"沒有{ id }的材料資料");
@@ -88,7 +89,8 @@ namespace FF14BOM.Controllers
                         Mtr_id = newId,
                         Mtr_Name = dto.Mtr_Name,
                         Mtr_type = dto.Mtr_type,
-                        NPC_Sell = dto.NPC_Sell
+                        NPC_Sell = dto.NPC_Sell,
+                        Mtr_Level = dto.mtr_Level
                     });
                     logmsg += $"新增{newId}的材料資料成功\n";
 
@@ -98,11 +100,12 @@ namespace FF14BOM.Controllers
                     var exist = _webContext.Item.FirstOrDefault(i => i.Mtr_id == dto.Mtr_id);
                     if (exist != null)
                     {
-                        if (exist.NPC_Sell != dto.NPC_Sell || exist.Mtr_Name != dto.Mtr_Name || exist.Mtr_type != dto.Mtr_type)
+                        if (exist.NPC_Sell != dto.NPC_Sell || exist.Mtr_Name != dto.Mtr_Name || exist.Mtr_type != dto.Mtr_type || exist.Mtr_Level != dto.mtr_Level)
                         {
                             exist.NPC_Sell = dto.NPC_Sell;
                             exist.Mtr_Name = dto.Mtr_Name;
                             exist.Mtr_type = dto.Mtr_type;
+                            exist.Mtr_Level = dto.mtr_Level;
                             logmsg += $"更新{dto.Mtr_id}的材料資料成功\n";
                         }
                         else
@@ -117,7 +120,8 @@ namespace FF14BOM.Controllers
                             Mtr_id = dto.Mtr_id,
                             Mtr_Name = dto.Mtr_Name,
                             Mtr_type = dto.Mtr_type,
-                            NPC_Sell = dto.NPC_Sell
+                            NPC_Sell = dto.NPC_Sell,
+                            Mtr_Level = dto.mtr_Level
                         });
                         logmsg += $"新增{dto.Mtr_id}的材料資料成功\n";
                     }
@@ -135,6 +139,26 @@ namespace FF14BOM.Controllers
             _webContext.Item.Remove(delete);
             _webContext.SaveChanges();
             return Ok($"刪除{id}的材料資料成功");
+        }
+
+        [HttpGet("main")]
+        public IActionResult GetMain()
+        {
+            var result = _webContext.Item
+                .GroupBy(i => i.Mtr_Level)
+                .Select(g => new ItemGetMain
+                {
+                    Mtr_Level = g.Key,
+                    ItemLists = g.Select(i => new ItemList
+                    {
+                        Mtr_id = i.Mtr_id,
+                        Mtr_Name = i.Mtr_Name
+                    }).ToList()
+                })
+                .Where(i => i.Mtr_Level != null && i.Mtr_Level != "")
+                .ToList();
+
+            return Ok(result);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using FF14BOM.Dtos;
+﻿using Azure.Core;
+using FF14BOM.Dtos;
 using FF14BOM.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -122,6 +123,21 @@ namespace FF14BOM.Controllers
 
             foreach (var dto in BOMDtoList)
             {
+                //先找出該產品的所有BOM資料，準備比對要刪除的項目
+                var BOMs = _webContext.BOM.Where(b => b.Pro_Id == dto.Pro_Id).ToList();
+                //從Body材料清單中提取所有材料編號，準備比對要刪除的項目
+                var mtrlist = dto.Materials.Select(m => m.Mtr_id).ToList();
+                //比對BOM資料和Body材料清單，找出BOM中有但Body沒有的項目，這些項目需要刪除
+                var delete = BOMs.Where(b => !mtrlist.Contains(b.Mtr_id)).ToList();
+
+                if (delete.Any())
+                {
+                    //刪除BOM中有但Body沒有的項目
+                    _webContext.BOM.RemoveRange(delete);
+                    foreach(var d in delete)
+                        logMsg += $"[刪除]{dto.Pro_Id}材料{d.Mtr_id}\n";
+                }
+
                 foreach (var mtr in dto.Materials)
                 {
                     //檢查是否有重複主鍵
@@ -138,34 +154,10 @@ namespace FF14BOM.Controllers
                     {
                         //無重複，新增BOM物件到清單
                         _webContext.BOM.Add(new BOM { Pro_Id = dto.Pro_Id, Mtr_id = mtr.Mtr_id, Use_QTY = mtr.Use_QTY });
-                        logMsg += $"[新增]{dto.Pro_Id}材料{mtr.Mtr_id}\n";
+                        logMsg += $"[新增]{dto.Pro_Id}材料{mtr.Mtr_id}->數量" + mtr.Use_QTY + "\n";
                     }
                 }
             }
-
-            //foreach (var dto in BOMDtoList)
-            //{
-            //    foreach (var mtr in dto.MtrDetailId)
-            //    {
-            //        //檢查是否有重複主鍵
-            //        var exist = _webContext.BOM.FirstOrDefault(b => b.Pro_Id == dto.Pro_Id && b.Mtr_id == mtr.Mtr_Id);
-            //        if (exist != null)  //有重複，跳過該筆資料並記錄錯誤訊息
-            //        {
-            //            if (exist.Use_QTY != mtr.Use_QTY)
-            //            {
-            //                exist.Use_QTY = mtr.Use_QTY; //更新數量
-            //                logMsg += $"[更新]{dto.Pro_Id}材料{mtr.Mtr_Id}->數量" + mtr.Use_QTY + "\n";
-            //            }
-            //        }
-            //        else
-            //        {
-            //            //無重複，新增BOM物件到清單
-            //            _webContext.BOM.Add(new BOM { Pro_Id = dto.Pro_Id, Mtr_id = mtr.Mtr_Id, Use_QTY = mtr.Use_QTY });
-            //            logMsg += $"[新增]{dto.Pro_Id}材料{mtr.Mtr_Id}\n";
-            //        }
-            //    }
-            //}
-
             _webContext.SaveChanges();
             return Ok("處理完成\n" + logMsg);
         }
@@ -211,7 +203,5 @@ namespace FF14BOM.Controllers
             _webContext.SaveChanges();
             return Ok($"已複製{proIdfrom}的資料至{proIdto}");
         }
-
-
     }
 }

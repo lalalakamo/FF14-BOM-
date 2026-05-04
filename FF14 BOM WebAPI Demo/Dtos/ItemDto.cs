@@ -9,5 +9,7 @@
         public string Mtr_Name { get; set; }    //材料名稱
 
         public bool NPC_Sell { get; set; }    //NPC販售
+
+        public string Mtr_Level { get; set; }    //材料等級 採16進制 100等 → A0
     }
 }
