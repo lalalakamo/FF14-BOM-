@@ -43,23 +43,43 @@ namespace FF14BOM.Controllers
         }
 
         // POST api/<MaterialTypeController>
-        [HttpPost("{mtr_type}")]
-        public IActionResult Post(string mtr_type,[FromBody] string mtr_name)
+        [HttpPost]
+        public IActionResult Post([FromBody] List<MaterialTypeGetDto> MTRDtoList)
         {
-            if (_webContext.MaterialType.Any(a => a.Mtr_type == mtr_type))
-                return BadRequest($"已經有{mtr_type}的類別資料");
-            _webContext.MaterialType.Add(new MaterialType { Mtr_type = mtr_type, Mtr_Type_name = mtr_name });
+            string logmsg = "";
+            if (MTRDtoList == null) return BadRequest("請提供類別資料");
+
+            foreach (var dto in MTRDtoList)
+            { 
+                var exist = _webContext.MaterialType.FirstOrDefault(a => a.Mtr_type == dto.Mtr_type);
+                if (exist != null)
+                { 
+                    exist.Mtr_Type_name = dto.Mtr_Type_name;
+                    logmsg += $"更新{dto.Mtr_type}的類別名稱為{dto.Mtr_Type_name}\n";
+                }
+                else
+                {
+                    _webContext.Add(new MaterialType { Mtr_type = dto.Mtr_type, Mtr_Type_name = dto.Mtr_Type_name });
+                    logmsg += $"新增{dto.Mtr_type}的類別資料成功\n";
+                }
+            }
             _webContext.SaveChanges();
-            return Ok($"新增{mtr_type}的類別資料成功");
+            return Ok(logmsg);
+            //if (_webContext.MaterialType.Any(a => a.Mtr_type == mtr_type))
+            //    return BadRequest($"已經有{mtr_type}的類別資料");
+            //_webContext.MaterialType.Add(new MaterialType { Mtr_type = mtr_type, Mtr_Type_name = mtr_name });
+            //_webContext.SaveChanges();
+            //return Ok($"新增{mtr_type}的類別資料成功");
         }
 
         // DELETE api/<MaterialTypeController>/5
         [HttpDelete("{mtr_type}")]
         public IActionResult Delete(string mtr_type)
         {
-            if(_webContext.MaterialType.FirstOrDefault(a => a.Mtr_type == mtr_type) == null)
+            var delete = _webContext.MaterialType.FirstOrDefault(a => a.Mtr_type == mtr_type);
+            if (delete == null)
                 return NotFound($"沒有{mtr_type}的類別資料");
-            _webContext.MaterialType.Remove(new MaterialType { Mtr_type = mtr_type });
+            _webContext.MaterialType.Remove(delete);
             _webContext.SaveChanges();
             return Ok($"刪除{mtr_type}的類別資料成功");
         }

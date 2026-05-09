@@ -1,6 +1,7 @@
 ﻿using Azure.Core;
 using FF14BOM.Dtos;
 using FF14BOM.Models;
+using FF14BOM.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
@@ -14,104 +15,64 @@ namespace FF14BOM.Controllers
     public class BOMController : ControllerBase
     {
         private readonly WebContext _webContext;
+        private readonly BOMService _bomService;
 
-        public BOMController(WebContext webContext)
+        public BOMController(WebContext webContext,BOMService bomService)
         {
             _webContext = webContext;
+            _bomService = bomService;
         }
+
 
         //案條件搜尋
         [HttpGet]
         public IActionResult Get(string? L ,string? P)
         {
-            var query = _webContext.Product.AsQueryable();
+            //var query = _webContext.Product.AsQueryable();
 
-            if (!string.IsNullOrEmpty(L)) query = query.Where(q => q.Pro_Level == L);
-            if (!string.IsNullOrEmpty(P)) query = query.Where(q => q.Pro_part == P);
+            //if (!string.IsNullOrEmpty(L)) query = query.Where(q => q.Pro_Level == L);
+            //if (!string.IsNullOrEmpty(P)) query = query.Where(q => q.Pro_part == P);
 
-            var result = query.Select(p => new BOMGetDto
-            { 
-                Pro_Id = p.Pro_Id,
-                Pro_Name = p.Pro_Name,
-                Materials = p.BOMs.Select(b => new MtrDetailDto
-                {
-                    Mtr_id = b.Mtr_id,
-                    Mtr_Name = b.Item.Mtr_Name,
-                    Use_QTY = b.Use_QTY
-                }).ToList()
-            }).ToList();
+            //var result = query.Select(p => new BOMGetDto
+            //{ 
+            //    Pro_Id = p.Pro_Id,
+            //    Pro_Name = p.Pro_Name,
+            //    Materials = p.BOMs.Select(b => new MtrDetailDto
+            //    {
+            //        Mtr_id = b.Mtr_id,
+            //        Mtr_Name = b.Item.Mtr_Name,
+            //        Use_QTY = b.Use_QTY
+            //    }).ToList()
+            //}).ToList();
 
-            return Ok(result);
+            //return Ok(result);
+            return Ok(_bomService.GetBOMs(L, P));
         }
 
         //案編號搜尋
         [HttpGet("{id}")]
         public IActionResult GetById(string id)
         {
-            var query = _webContext.Product.Where(p => p.Pro_Id == id).AsQueryable();
+            //var query = _webContext.Product.Where(p => p.Pro_Id == id).AsQueryable();
 
-            var result = query.Select(p => new BOMGetDto 
-            {
-                Pro_Id = p.Pro_Id,
-                Pro_Name = p.Pro_Name,
-                Materials = p.BOMs.Select(b => new MtrDetailDto 
-                {
-                    Mtr_id = b.Mtr_id,
-                    Mtr_Name = b.Item.Mtr_Name,
-                    Use_QTY = b.Use_QTY
-                }).ToList()
-            }).FirstOrDefault();
+            //var result = query.Select(p => new BOMGetDto 
+            //{
+            //    Pro_Id = p.Pro_Id,
+            //    Pro_Name = p.Pro_Name,
+            //    Materials = p.BOMs.Select(b => new MtrDetailDto 
+            //    {
+            //        Mtr_id = b.Mtr_id,
+            //        Mtr_Name = b.Item.Mtr_Name,
+            //        Use_QTY = b.Use_QTY
+            //    }).ToList()
+            //}).FirstOrDefault();
 
-            if (result == null)
-                return NotFound();
+            //if (result == null)
+            //    return NotFound();
 
-            return Ok(result);
-        }
+            //return Ok(result);
 
-        //案條件搜尋(BOM初始資料型態)
-        [HttpGet("BOM")]
-        public IActionResult GetBOM(string? L, string? P)
-        {
-            var query = _webContext.Product.AsQueryable();
-
-            if (!string.IsNullOrEmpty(L)) query = query.Where(q => q.Pro_Level == L);
-            if (!string.IsNullOrEmpty(P)) query = query.Where(q => q.Pro_part == P);
-
-            var result = query.Select(p => new BOMAddDto
-            {
-                Pro_Id = p.Pro_Id,
-                Pro_Name = p.Pro_Name,
-                MtrDetailId = p.BOMs.Select(b => new MtrDetailIdDto
-                {
-                    Mtr_Id = b.Mtr_id,
-                    Use_QTY = b.Use_QTY
-                }).ToList()
-            }).ToList();
-
-            return Ok(result);
-        }
-
-        //案編號搜尋(BOM初始資料型態)
-        [HttpGet("{id}/BOM")]
-        public IActionResult GetByIdBOM(string id)
-        {
-            var query = _webContext.Product.Where(p => p.Pro_Id == id).AsQueryable();
-
-            var result = query.Select(p => new BOMAddDto
-            {
-                Pro_Id = p.Pro_Id,
-                Pro_Name = p.Pro_Name,
-                MtrDetailId = p.BOMs.Select(b => new MtrDetailIdDto
-                {
-                    Mtr_Id = b.Mtr_id,
-                    Use_QTY = b.Use_QTY
-                }).ToList()
-            }).FirstOrDefault();
-
-            if (result == null)
-                return NotFound();
-
-            return Ok(result);
+            return Ok(_bomService.GetBOM(id));
         }
 
         // POST api/<ValuesController>
