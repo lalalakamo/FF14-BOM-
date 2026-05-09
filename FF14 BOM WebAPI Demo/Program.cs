@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using FF14BOM.Models;
 using WebAPI.Models;
+using FF14BOM.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,8 @@ builder.Services.AddControllers();
 
 builder.Services.AddDbContext<WebContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("WebDatabase")));
+builder.Services.AddScoped<BOMService>();
+builder.Services.AddScoped<ProductService>();
 
 var app = builder.Build();
 
