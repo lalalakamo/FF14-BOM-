@@ -1,5 +1,6 @@
 ﻿using FF14BOM.Dtos;
 using FF14BOM.Models;
+using FF14BOM.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Cryptography;
 
@@ -12,33 +13,28 @@ namespace FF14BOM.Controllers
     public class MaterialTypeController : ControllerBase
     {
         private readonly WebContext _webContext;
+        private readonly MaterialTypeService _materialtypeService;
 
-        public MaterialTypeController(WebContext webContext)
+        public MaterialTypeController(WebContext webContext,MaterialTypeService materialTypeService)
         {
             _webContext = webContext;
+            _materialtypeService = materialTypeService;
         }
 
         // GET: api/<MaterialTypeController>
         [HttpGet]
         public IActionResult Get()
         {
-            var result = _webContext.MaterialType.Select(a => new MaterialTypeGetDto { 
-                Mtr_type = a.Mtr_type,
-                Mtr_Type_name = a.Mtr_Type_name
-            }).ToList();
-            return Ok(result);
-
+            return Ok(_materialtypeService.GetMatetialTypes());
         }
 
         // GET api/<MaterialTypeController>/5
         [HttpGet("{id}")]
-        public IActionResult GetById(int id)
+        public IActionResult GetById(string id)
         {
-            var result = _webContext.MaterialType.Select(a => new MaterialTypeGetDto
-            {
-                Mtr_type = a.Mtr_type,
-                Mtr_Type_name = a.Mtr_Type_name
-            }).FirstOrDefault();
+            var result = _materialtypeService.GetMatetialType(id);
+            if (result == null)
+                return NotFound();
             return Ok(result);
         }
 
@@ -46,42 +42,21 @@ namespace FF14BOM.Controllers
         [HttpPost]
         public IActionResult Post([FromBody] List<MaterialTypeGetDto> MTRDtoList)
         {
-            string logmsg = "";
             if (MTRDtoList == null) return BadRequest("請提供類別資料");
-
-            foreach (var dto in MTRDtoList)
-            { 
-                var exist = _webContext.MaterialType.FirstOrDefault(a => a.Mtr_type == dto.Mtr_type);
-                if (exist != null)
-                { 
-                    exist.Mtr_Type_name = dto.Mtr_Type_name;
-                    logmsg += $"更新{dto.Mtr_type}的類別名稱為{dto.Mtr_Type_name}\n";
-                }
-                else
-                {
-                    _webContext.Add(new MaterialType { Mtr_type = dto.Mtr_type, Mtr_Type_name = dto.Mtr_Type_name });
-                    logmsg += $"新增{dto.Mtr_type}的類別資料成功\n";
-                }
-            }
-            _webContext.SaveChanges();
-            return Ok(logmsg);
-            //if (_webContext.MaterialType.Any(a => a.Mtr_type == mtr_type))
-            //    return BadRequest($"已經有{mtr_type}的類別資料");
-            //_webContext.MaterialType.Add(new MaterialType { Mtr_type = mtr_type, Mtr_Type_name = mtr_name });
-            //_webContext.SaveChanges();
-            //return Ok($"新增{mtr_type}的類別資料成功");
+            return Ok(_materialtypeService.PostMaterialType(MTRDtoList));
         }
 
         // DELETE api/<MaterialTypeController>/5
         [HttpDelete("{mtr_type}")]
         public IActionResult Delete(string mtr_type)
         {
-            var delete = _webContext.MaterialType.FirstOrDefault(a => a.Mtr_type == mtr_type);
-            if (delete == null)
-                return NotFound($"沒有{mtr_type}的類別資料");
-            _webContext.MaterialType.Remove(delete);
-            _webContext.SaveChanges();
-            return Ok($"刪除{mtr_type}的類別資料成功");
+            return Ok(_materialtypeService.DeleteMaterialType(mtr_type));
+            //var delete = _webContext.MaterialType.FirstOrDefault(a => a.Mtr_type == mtr_type);
+            //if (delete == null)
+            //    return NotFound($"沒有{mtr_type}的類別資料");
+            //_webContext.MaterialType.Remove(delete);
+            //_webContext.SaveChanges();
+            //return Ok($"刪除{mtr_type}的類別資料成功");
         }
     }
 }

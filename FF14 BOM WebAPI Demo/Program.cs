@@ -13,6 +13,8 @@ builder.Services.AddDbContext<WebContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("WebDatabase")));
 builder.Services.AddScoped<BOMService>();
 builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<ItemService>();
+builder.Services.AddScoped<MaterialTypeService>();
 
 var app = builder.Build();
 
