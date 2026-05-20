@@ -1,5 +1,18 @@
 ﻿namespace FF14BOM.Dtos
 {
+    public class ProductGetMainDto
+    {
+        public string Pro_Level { get; set; }
+
+        public List<ProductByLevelDto> Products { get; set; }
+    }
+
+    public class ProductByLevelDto
+    { 
+        public string Pro_Name { get; set; }
+        public string Pro_Id { get; set; }
+    }
+
     public class ProductGetDto
     {
         public string Pro_Level { get; set; }    //裝備等級 採16進制 100等 → A0
