@@ -15,6 +15,7 @@ builder.Services.AddScoped<BOMService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<ItemService>();
 builder.Services.AddScoped<MaterialTypeService>();
+builder.Services.AddScoped<SearchService>();
 
 var app = builder.Build();
 
